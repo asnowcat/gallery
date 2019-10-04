@@ -51,7 +51,7 @@ class Content
     def self.call(env)
         path = env['PATH_INFO']
         headers = {'Content-Type' => 'application/json'}
-        page = Oj.dump traverse_dir_tree('content')
+        page = Oj.dump traverse_dir_tree('media')
         
         ['200', headers, [page]]
     end
@@ -59,7 +59,7 @@ end
 
 app = Rack::Builder.app do
     use Rack::Static, :urls => ['/static']
-    map '/api/content_index' do
+    map '/api/index/media' do
         run Content
     end
 end
