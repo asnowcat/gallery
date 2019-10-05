@@ -6,25 +6,46 @@ class MenuItem extends React.Component {
         };
 
         this.handleToggle = this.handleToggle.bind(this);
+        this.handleSelect = this.handleSelect.bind(this);
     }
 
     handleToggle() {
         this.setState({ open: !this.state.open });
     }
 
+    handleSelect() {
+        this.props.onFolderSelect(this.props.path);
+    }
+
     render() {
         let hiddenIfClosed = this.state.open ? '' : 'is-hidden';
         let hiddenIfOpen = this.state.open ? 'is-hidden' : '';
+        let isActive = this.props.path === this.props.activeFolder ? 'is-active' : '';
         if (!this.props.has_child_dirs) {
-            return (<li><a>{this.props.text}</a></li>);
+            return (<li>
+                <a className={isActive} onClick={this.handleSelect}>
+                    {this.props.text}
+                </a>
+            </li>);
         } else {
             return (<li>
-                <a>
-                    <span className="icon" onClick={this.handleToggle}>
-                        <span className={hiddenIfClosed}><i className="fas fa-folder-plus"></i></span>
-                        <span className={hiddenIfOpen}><i className="fas fa-folder-minus"></i></span>
-                    </span>{this.props.text}
-                </a>
+                <div style={{ position: 'relative' }}>
+                    <span className="icon" onClick={this.handleToggle} style={{
+                        position: 'absolute',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        left: '-1.5rem',
+                        backgroundColor: '#fff'
+                    }}>
+                        <span className={hiddenIfClosed}><i className="far fa-lg fa-minus-square"></i></span>
+                        <span className={hiddenIfOpen}><i className="far fa-lg fa-plus-square"></i></span>
+                    </span>
+                    <a className={isActive} onClick={this.handleSelect}>
+                        <span>
+                            {this.props.text}
+                        </span>
+                    </a>
+                </div>
                 <span className={hiddenIfClosed}>{this.props.children}</span>
             </li>);
         }
@@ -45,7 +66,7 @@ class Menu extends React.Component {
         return splat[len - 1];
     }
 
-    to_list_item(filepath, index, is_open) {
+    to_list_item(filepath, index) {
         if (!index) {
             return null;
         }
@@ -55,9 +76,11 @@ class Menu extends React.Component {
         return (
             <MenuItem
                 key={filepath}
+                path={filepath}
                 has_child_dirs={has_child_dirs}
-                is_open={is_open}
                 text={basename}
+                onFolderSelect={this.props.onFolderSelect}
+                activeFolder={this.props.activeFolder}
             >
                 {has_child_dirs && <ul>
                     {child_dirs.map((n) => {
@@ -69,7 +92,7 @@ class Menu extends React.Component {
 
     render() {
         return (<aside className="menu">
-            <ul className="menu-list">{this.to_list_item(this.props.root, this.props.index, this.props.is_open)}</ul>
+            <ul className="menu-list">{this.to_list_item(this.props.root, this.props.index)}</ul>
         </aside>)
     }
 }
@@ -127,11 +150,11 @@ class App extends React.Component {
         this.state = {
             url: 'https://picsum.photos/1600/900',
             index: null,
-            isMenuItemOpen: {},
-            root: 'media/'
+            root: 'media/',
+            activeFolder: '',
         };
 
-        this.handleMenuItemToggle = this.handleMenuItemToggle.bind(this);
+        this.handleFolderSelect = this.handleFolderSelect.bind(this);
 
         let xhr = new XMLHttpRequest;
         xhr.open('GET', 'rpc/index/media');
@@ -153,10 +176,8 @@ class App extends React.Component {
         }
     }
 
-    handleMenuItemToggle(path) {
-        let isMenuItemOpen = this.state.isMenuItemOpen;
-        isMenuItemOpen[path] = !isMenuItemOpen[path];
-        this.setState({ isMenuItemOpen: isMenuItemOpen });
+    handleFolderSelect(path) {
+        this.setState({ activeFolder: path });
     }
 
     render() {
@@ -167,6 +188,8 @@ class App extends React.Component {
                         <Menu
                             index={this.state.index}
                             root={this.state.root}
+                            onFolderSelect={this.handleFolderSelect}
+                            activeFolder={this.state.activeFolder}
                         />
                     </div>
                     <div className="column">
