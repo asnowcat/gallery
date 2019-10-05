@@ -1,3 +1,36 @@
+class MenuItem extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            open: true
+        };
+
+        this.handleToggle = this.handleToggle.bind(this);
+    }
+
+    handleToggle() {
+        this.setState({ open: !this.state.open });
+    }
+
+    render() {
+        let hiddenIfClosed = this.state.open ? '' : 'is-hidden';
+        let hiddenIfOpen = this.state.open ? 'is-hidden' : '';
+        if (!this.props.has_child_dirs) {
+            return (<li><a>{this.props.text}</a></li>);
+        } else {
+            return (<li>
+                <a>
+                    <span className="icon" onClick={this.handleToggle}>
+                        <span className={hiddenIfClosed}><i className="fas fa-folder-plus"></i></span>
+                        <span className={hiddenIfOpen}><i className="fas fa-folder-minus"></i></span>
+                    </span>{this.props.text}
+                </a>
+                <span className={hiddenIfClosed}>{this.props.children}</span>
+            </li>);
+        }
+    }
+}
+
 class Menu extends React.Component {
     constructor(props) {
         super(props);
@@ -12,35 +45,32 @@ class Menu extends React.Component {
         return splat[len - 1];
     }
 
-    to_list_item(filepath, index) {
-        let children = index[filepath];
+    to_list_item(filepath, index, is_open) {
+        if (!index) {
+            return null;
+        }
+        let child_dirs = index[filepath];
         let basename = this.basename(filepath);
-        if (!children || children.length === 0) {
-            return (<li key={filepath}><a>{basename}</a></li>);
-        } // else
-        return (<li key={filepath}><a>{basename}</a>
-            <ul>
-                {children.map((n) => { return (this.to_list_item(n, index)); })}
-            </ul>
-        </li>);
+        let has_child_dirs = child_dirs && child_dirs.length > 0;
+        return (
+            <MenuItem
+                key={filepath}
+                has_child_dirs={has_child_dirs}
+                is_open={is_open}
+                text={basename}
+            >
+                {has_child_dirs && <ul>
+                    {child_dirs.map((n) => {
+                        return (this.to_list_item(n, index));
+                    })}
+                </ul>}</MenuItem>
+        );
     }
 
     render() {
         return (<aside className="menu">
-            <ul className="menu-list">{this.to_list_item(this.props.root, this.props.index)}</ul>
+            <ul className="menu-list">{this.to_list_item(this.props.root, this.props.index, this.props.is_open)}</ul>
         </aside>)
-        /*
-        return (<aside className="menu">
-            <ul className="menu-list">
-                <li><a>foo</a></li>
-                <li><a>bar</a>
-                    <ul>
-                        <li><a>baz</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </aside>);
-        */
     }
 }
 
@@ -56,35 +86,27 @@ function RightArrow() {
     </p>);
 }
 
-function Viewer(props) {
+function ThumbnailBar() {
     return (
-        <div className="container">
-            <div className="columns">
-                <div className="column is-one-fifth">
-                    <Menu index={props.index} root='media/' />
-                </div>
-                <div className="column">
-                    <div className="level">
-                        <div className="columns is-vcentered">
-                            <div className="column has-text-centered is-narrow">
-                                <LeftArrow />
-                            </div>
+        <p>Ullam rerum aut dicta labore non iusto dolorem ratione. Nihil quia rerum numquam. Ut est beatae aut quia ipsum. Nulla cumque quasi explicabo assumenda corporis possimus itaque rerum.…</p>
+    );
+}
 
-                            <div className="column">
-                                {props.children}
-                            </div>
+function Viewer(props) {
+    return (<div className="columns is-vcentered">
+        <div className="column has-text-centered is-narrow">
+            <LeftArrow />
+        </div>
 
-                            <div className="column has-text-centered is-narrow">
-                                <RightArrow />
-                            </div>
-                        </div>
-                    </div>
-                    <div className="level">
-                        <p>Ullam rerum aut dicta labore non iusto dolorem ratione. Nihil quia rerum numquam. Ut est beatae aut quia ipsum. Nulla cumque quasi explicabo assumenda corporis possimus itaque rerum.…</p>
-                    </div>
-                </div>
-            </div>
-        </div>);
+        <div className="column">
+            {props.children}
+        </div>
+
+        <div className="column has-text-centered is-narrow">
+            <RightArrow />
+        </div>
+    </div>
+    );
 }
 
 function Section(props) {
@@ -104,10 +126,14 @@ class App extends React.Component {
         super(props);
         this.state = {
             url: 'https://picsum.photos/1600/900',
-            index: ''
+            index: null,
+            isMenuItemOpen: {},
+            root: 'media/'
         };
-        let xhr = new XMLHttpRequest;
 
+        this.handleMenuItemToggle = this.handleMenuItemToggle.bind(this);
+
+        let xhr = new XMLHttpRequest;
         xhr.open('GET', 'rpc/index/media');
         xhr.responseType = 'json';
         xhr.send();
@@ -120,17 +146,42 @@ class App extends React.Component {
                     response[k] = response[k]['directories'];
                 }
                 let index = response;
-                this.setState({ index: index });
+                this.setState({
+                    index: index
+                });
             }
         }
     }
 
+    handleMenuItemToggle(path) {
+        let isMenuItemOpen = this.state.isMenuItemOpen;
+        isMenuItemOpen[path] = !isMenuItemOpen[path];
+        this.setState({ isMenuItemOpen: isMenuItemOpen });
+    }
+
     render() {
-        return (<Section>
-            <Viewer index={this.state.index}>
-                <Image url={this.state.url} />
-            </Viewer>
-        </Section>);
+        return (<section className="section">
+            <div className="container">
+                <div className="columns">
+                    <div className="column is-one-fifth">
+                        <Menu
+                            index={this.state.index}
+                            root={this.state.root}
+                        />
+                    </div>
+                    <div className="column">
+                        <div className="level">
+                            <Viewer>
+                                <Image url={this.state.url} />
+                            </Viewer>
+                        </div>
+                        <div className="level">
+                            <ThumbnailBar />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>);
     }
 }
 
