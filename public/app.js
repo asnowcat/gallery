@@ -66,11 +66,11 @@ class Menu extends React.Component {
         return splat[len - 1];
     }
 
-    to_list_item(filepath, index) {
-        if (!index) {
+    to_list_item(filepath, subdirsIndex) {
+        if (!subdirsIndex) {
             return null;
         }
-        let child_dirs = index[filepath];
+        let child_dirs = subdirsIndex[filepath];
         let basename = this.basename(filepath);
         let has_child_dirs = child_dirs && child_dirs.length > 0;
         return (
@@ -84,7 +84,7 @@ class Menu extends React.Component {
             >
                 {has_child_dirs && <ul>
                     {child_dirs.map((n) => {
-                        return (this.to_list_item(n, index));
+                        return (this.to_list_item(n, subdirsIndex));
                     })}
                 </ul>}</MenuItem>
         );
@@ -92,7 +92,7 @@ class Menu extends React.Component {
 
     render() {
         return (<aside className="menu">
-            <ul className="menu-list">{this.to_list_item(this.props.root, this.props.index)}</ul>
+            <ul className="menu-list">{this.to_list_item(this.props.root, this.props.subdirs)}</ul>
         </aside>)
     }
 }
@@ -109,10 +109,53 @@ function RightArrow() {
     </p>);
 }
 
-function ThumbnailBar() {
-    return (
-        <p>Ullam rerum aut dicta labore non iusto dolorem ratione. Nihil quia rerum numquam. Ut est beatae aut quia ipsum. Nulla cumque quasi explicabo assumenda corporis possimus itaque rerum.…</p>
-    );
+class Thumbnail extends React.Component {
+    constructor(props) {
+        super(props);
+
+        this.handleSelect = this.handleSelect.bind(this);
+    }
+
+    handleSelect() {
+        this.props.onImageSelect(this.props.url);
+    }
+
+    render () {
+        return (
+            <div className="column">
+                <figure className="image">
+                        <a onClick={this.handleSelect}>
+                            <img src={this.props.url} style={{ objectFit: 'cover', width: '322px', height: '200px' }} />
+                        </a>
+                </figure>
+            </div>
+        );
+    }
+}
+
+class ThumbnailBar extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+
+
+
+    render() {
+        if (this.props.images && this.props.activeFolder) {
+            let images = this.props.images[this.props.activeFolder];
+            let elems = images.map((img) => {
+                return (
+                <Thumbnail
+                    key={img}
+                    url={img}
+                    onImageSelect={this.props.onImageSelect}
+                />);
+            });
+            return (<div className="columns">{elems}</div>);
+        } else {
+            return null;
+        }
+    }
 }
 
 function Viewer(props) {
@@ -148,13 +191,15 @@ class App extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            url: 'https://picsum.photos/1600/900',
-            index: null,
+            url: 'media/foo/635-1600x900.jpg',
+            subdirs: null,
+            images: null,
             root: 'media/',
-            activeFolder: '',
+            activeFolder: 'media/',
         };
 
         this.handleFolderSelect = this.handleFolderSelect.bind(this);
+        this.handleImageSelect = this.handleImageSelect.bind(this);
 
         let xhr = new XMLHttpRequest;
         xhr.open('GET', 'rpc/index/media');
@@ -164,13 +209,15 @@ class App extends React.Component {
             if (xhr.status !== 200) {
                 alert(`Error ${xhr.status}: ${xhr.statusText}`);
             } else {
-                let response = xhr.response;
+                let subdirs = {};
+                let images = {};
                 for (let k in xhr.response) {
-                    response[k] = response[k]['directories'];
+                    subdirs[k] = xhr.response[k]['directories'];
+                    images[k] = xhr.response[k]['files'].filter((fn) => fn.match(/\.jpg$/));
                 }
-                let index = response;
                 this.setState({
-                    index: index
+                    subdirs: subdirs,
+                    images: images
                 });
             }
         }
@@ -180,13 +227,17 @@ class App extends React.Component {
         this.setState({ activeFolder: path });
     }
 
+    handleImageSelect(path) {
+        this.setState({ url: path });
+    }
+
     render() {
         return (<section className="section">
             <div className="container">
                 <div className="columns">
                     <div className="column is-one-fifth">
                         <Menu
-                            index={this.state.index}
+                            subdirs={this.state.subdirs}
                             root={this.state.root}
                             onFolderSelect={this.handleFolderSelect}
                             activeFolder={this.state.activeFolder}
@@ -199,7 +250,11 @@ class App extends React.Component {
                             </Viewer>
                         </div>
                         <div className="level">
-                            <ThumbnailBar />
+                            <ThumbnailBar
+                                activeFolder={this.state.activeFolder}
+                                images={this.state.images}
+                                onImageSelect={this.handleImageSelect}
+                            />
                         </div>
                     </div>
                 </div>

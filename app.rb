@@ -46,7 +46,7 @@ end
 
 app = Rack::Builder.app do
     use Rack::Static, :urls => {"/" => 'index.html'}, :root => 'public'
-    use Rack::Static, :urls => ["/public"]
+    use Rack::Static, :urls => ["/public", "/media"]
     map '/rpc/index/media' do
         run MediaIndex
     end
