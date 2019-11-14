@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+require 'bcrypt'
+require 'securerandom'
+require 'digest'
+
+f = File.open(File.join(__dir__, 'password_db'), 'a')
+pass = SecureRandom.base64(24).gsub('+', '-').gsub('/', '_')
+f.write BCrypt::Password.create(pass) + "\n"
+p pass
+f.close()

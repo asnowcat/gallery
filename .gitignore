@@ -1,4 +1,7 @@
 vendor
 .bundle
-Gemfile.lock
+*.lock
 media
+*_db
+*.log
+node_modules

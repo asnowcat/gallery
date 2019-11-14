@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+require 'shellwords'
+def convert_dir_rec(d)
+    Dir.each_child(d) do |fn|
+        fn = File.join(d, fn)
+        if ((fn.match(/\.tif$/i) || fn.match(/\.bmp$/i)) && File.file?(fn))
+            nfn = fn.sub(/\.\w+$/, '') + '.jpg'
+            pp fn + ' => ' + nfn
+            `gm convert #{fn.shellescape} -quality 80 jpg:#{nfn.shellescape}` unless File.file?(nfn)
+        elsif (File.directory?(fn))
+            convert_dir_rec fn
+        end
+    end
+end
+
+convert_dir_rec ARGV[0]

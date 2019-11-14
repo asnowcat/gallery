@@ -1,5 +1,9 @@
+#!/usr/bin/env ruby
 require 'rack'
 require 'oj'
+require 'bcrypt'
+require 'securerandom'
+require 'pry'
 
 Oj.mimic_JSON
 
@@ -37,14 +41,28 @@ class MediaIndex
     end
 
     def self.call(env)
-        headers = {'Content-Type' => 'application/json'}
+        request = Rack::Request.new(env)
+        response = Rack::Response.new
+#        File.foreach('session_db') do |line|
+#            if ((line != '#session_db' &&
+#                    request.cookies['session'].include?(line)) ||
+#                    ENV['RACK_ENV'] == 'development')
+#
+#                break
+#            else
+#                response.status = 403
+#            end
+#        end
         page = Oj.dump traverse_dir_tree('media/')
 
-        ['200', headers, [page]]
+        response.status = 200
+        response['Content-Type'] = 'application/json'
+        response.write(page)
+        return response.finish()
     end
 end
 
-app = Rack::Builder.app do
+app = Rack::Builder.app do  
     use Rack::Static, :urls => {"/" => 'index.html'}, :root => 'public'
     use Rack::Static, :urls => ["/public", "/media"]
     map '/rpc/index/media' do
@@ -52,5 +70,4 @@ app = Rack::Builder.app do
     end
 end
 
-Rack::Handler::WEBrick.run app
-
+Rack::Handler::WEBrick.run app, Host: 'localhost', Port: '8080'
